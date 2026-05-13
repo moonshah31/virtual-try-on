@@ -1,9 +1,6 @@
-# dependencies
-node_modules/
-# environment
+node_modules
 .env
-# build
-/dist
-/build
-# misc
+dist
+build
+.vscode
 .DS_Store
