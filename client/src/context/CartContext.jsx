@@ -1,10 +1,7 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { useState, useEffect } from "react";
+import { CartContext } from "./CartContextCore";
+import { getProductKey } from "../utils/productCategories";
 
-const CartContext = createContext();
-
-export const useCart = () => {
-  return useContext(CartContext);
-};
 
 export const CartProvider = ({ children }) => {
 
@@ -20,12 +17,22 @@ export const CartProvider = ({ children }) => {
 
   const addToCart = (product) => {
     setCartItems(prevItems => {
-      const existingItem = prevItems.find(item => item._id === product._id);
+      const productKey = getProductKey(product);
+      const existingItem = prevItems.find(
+        item => getProductKey(item) === productKey
+      );
 
       if (existingItem) {
         return prevItems.map(item =>
-          item._id === product._id
-            ? { ...item, quantity: item.quantity + 1 }
+          getProductKey(item) === productKey
+            ? {
+                ...item,
+                quantity: item.quantity + 1,
+                prescriptionImagePath:
+                  product.prescriptionImagePath ||
+                  item.prescriptionImagePath ||
+                  item.prescriptionCardImage
+              }
             : item
         );
       }
@@ -35,7 +42,9 @@ export const CartProvider = ({ children }) => {
   };
 
   const removeFromCart = (id) => {
-    setCartItems(prevItems => prevItems.filter(item => item._id !== id));
+    setCartItems(prevItems =>
+      prevItems.filter(item => getProductKey(item) !== id)
+    );
   };
 
   const updateQuantity = (id, quantity) => {
@@ -46,7 +55,17 @@ export const CartProvider = ({ children }) => {
 
     setCartItems(prevItems =>
       prevItems.map(item =>
-        item._id === id ? { ...item, quantity } : item
+        getProductKey(item) === id ? { ...item, quantity } : item
+      )
+    );
+  };
+
+  const updatePrescriptionCard = (id, prescriptionImagePath) => {
+    setCartItems(prevItems =>
+      prevItems.map(item =>
+        getProductKey(item) === id
+          ? { ...item, prescriptionImagePath, prescriptionCardImage: "" }
+          : item
       )
     );
   };
@@ -62,6 +81,7 @@ export const CartProvider = ({ children }) => {
         addToCart,
         removeFromCart,
         updateQuantity,
+        updatePrescriptionCard,
         clearCart
       }}
     >

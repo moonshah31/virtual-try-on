@@ -1,15 +1,21 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
-import { useCart } from "../context/CartContext";
+import { API_BASE_URL } from "../config/api";
+import { useCart } from "../context/useCart";
+import {
+  getItemTotal,
+  getProductKey,
+  getPrescriptionPath,
+  normalizeProductCategory,
+  getPrescriptionFee
+} from "../utils/productCategories";
 import "../styles/styles.css";
 
 function Checkout() {
-
   const { cartItems, clearCart } = useCart();
-
   const [orderPlaced, setOrderPlaced] = useState(false);
-
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [form, setForm] = useState({
     name: "",
     phone: "",
@@ -17,9 +23,12 @@ function Checkout() {
     city: ""
   });
 
-  const totalPrice = cartItems.reduce(
-    (total, item) => total + item.price * item.quantity,
-    0
+  const totalPrice = useMemo(
+    () => cartItems.reduce(
+      (total, item) => total + getItemTotal(item),
+      0
+    ),
+    [cartItems]
   );
 
   const handleChange = (e) => {
@@ -30,110 +39,79 @@ function Checkout() {
   };
 
   const placeOrder = async () => {
+    if (!form.name || !form.phone || !form.address || !form.city) {
+      alert("Please fill all fields");
+      return;
+    }
 
-  if (
-    !form.name ||
-    !form.phone ||
-    !form.address ||
-    !form.city
-  ) {
-    alert("Please fill all fields");
-    return;
-  }
+    setIsSubmitting(true);
 
-  try {
+    try {
+      const orderData = {
+        customerName: form.name,
+        phone: form.phone,
+        address: form.address,
+        city: form.city,
+        items: cartItems.map((item) => ({
+          productId: getProductKey(item),
+          name: item.name,
+          productName: item.name,
+          category: normalizeProductCategory(item.category),
+          image: item.image,
+          price: item.price,
+          quantity: item.quantity,
+          baseSubtotal: item.price * item.quantity,
+          prescriptionFee: getPrescriptionFee(item),
+          prescriptionUploaded: Boolean(getPrescriptionPath(item)),
+          itemTotal: getItemTotal(item),
+          prescriptionImagePath: getPrescriptionPath(item)
+        })),
+        totalPrice
+      };
 
-    const orderData = {
-
-      customerName: form.name,
-
-      phone: form.phone,
-
-      address: form.address,
-
-      city: form.city,
-
-      items: cartItems.map(item => ({
-        productId: item._id,
-        name: item.name,
-        image: item.image,
-        price: item.price,
-        quantity: item.quantity
-      })),
-
-      totalPrice
-    };
-
-    const response = await fetch(
-      "http://localhost:5000/api/orders",
-      {
+      const response = await fetch(`${API_BASE_URL}/orders`, {
         method: "POST",
-
         headers: {
           "Content-Type": "application/json"
         },
-
         body: JSON.stringify(orderData)
+      });
+
+      if (!response.ok) {
+        throw new Error("Order request failed");
       }
-    );
 
-    const data = await response.json();
+      setOrderPlaced(true);
+      clearCart();
+    } catch (error) {
+      console.log(error);
+      alert("Something went wrong");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-    console.log(data);
-
-   setOrderPlaced(true);
-
-setTimeout(() => {
-  clearCart();
-}, 1000);
-
-  } catch (error) {
-
-    console.log(error);
-
-    alert("Something went wrong");
-  }
-};  
-  // =========================
-  // ORDER SUCCESS
-  // =========================
   if (orderPlaced) {
     return (
       <>
         <Navbar />
-
-        <div className="container success-page">
-
-          <h1>
-            🎉 Order Placed Successfully!
-          </h1>
-
-          <p>
-            Your order has been confirmed.
-          </p>
-
-          <p>
-            Thank you for shopping with us.
-          </p>
-
-        </div>
-
+        <main className="container success-page">
+          <h1>Order Placed Successfully!</h1>
+          <p>Your order has been confirmed.</p>
+          <p>Thank you for shopping with us.</p>
+        </main>
         <Footer />
       </>
     );
   }
-  // =========================
-  // EMPTY CART
-  // =========================
+
   if (cartItems.length === 0) {
     return (
       <>
         <Navbar />
-
-        <div className="container">
+        <main className="container empty-state">
           <h1>Your cart is empty.</h1>
-        </div>
-
+        </main>
         <Footer />
       </>
     );
@@ -143,15 +121,11 @@ setTimeout(() => {
     <>
       <Navbar />
 
-      <div className="container">
-
+      <main className="container">
         <h1>Checkout</h1>
 
         <div className="checkout-grid">
-
-          {/* SHIPPING FORM */}
-          <div className="checkout-form">
-
+          <section className="checkout-form">
             <h2>Shipping Information</h2>
 
             <input
@@ -187,53 +161,40 @@ setTimeout(() => {
             />
 
             <p>
-              <strong>Payment Method:</strong>
-              {" "}
-              Cash on Delivery
+              <strong>Payment Method:</strong> Cash on Delivery
             </p>
 
             <button
               className="button-primary"
               onClick={placeOrder}
+              disabled={isSubmitting}
             >
-              Place Order
+              {isSubmitting ? "Placing Order..." : "Place Order"}
             </button>
+          </section>
 
-          </div>
-
-          {/* ORDER SUMMARY */}
-          <div className="order-summary">
-
+          <aside className="order-summary">
             <h2>Order Summary</h2>
 
             {cartItems.map((item) => (
-
-              <div
-                key={item._id}
-                className="summary-item"
-              >
-                <p>
-                  {item.name} x {item.quantity}
-                </p>
-
-                <p>
-                  Rs. {item.price * item.quantity}
-                </p>
+              <div key={item._id} className="summary-item">
+                <div>
+                  <p>{item.name} x {item.quantity}</p>
+                  {getPrescriptionPath(item) && (
+                    <p className="prescription-status">
+                      Prescription card uploaded (+Rs. {getPrescriptionFee(item)})
+                    </p>
+                  )}
+                </div>
+                <p>Rs. {getItemTotal(item)}</p>
               </div>
-
             ))}
 
             <hr />
-
-            <h3>
-              Total: Rs. {totalPrice}
-            </h3>
-
-          </div>
-
+            <h3>Total: Rs. {totalPrice}</h3>
+          </aside>
         </div>
-
-      </div>
+      </main>
 
       <Footer />
     </>

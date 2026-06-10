@@ -4,3 +4,5 @@ dist
 build
 .vscode
 .DS_Store
+server/uploads/prescriptions/*
+!server/uploads/prescriptions/.gitkeep

@@ -1,16 +1,23 @@
 import express from "express";
-import Product from "../models/Product.js";
+import {
+  createProduct,
+  deleteProduct,
+  getProductById,
+  getProducts,
+  updateProduct
+} from "../controllers/productController.js";
 
 const router = express.Router();
 
-// GET all products
-router.get("/", async (req, res) => {
-  try {
-    const products = await Product.find();
-    res.json(products);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-});
+router
+  .route("/")
+  .get(getProducts)
+  .post(createProduct);
+
+router
+  .route("/:id")
+  .get(getProductById)
+  .put(updateProduct)
+  .delete(deleteProduct);
 
 export default router;

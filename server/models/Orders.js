@@ -32,6 +32,14 @@ const orderSchema = new mongoose.Schema({
         type: String
       },
 
+      productName: {
+        type: String
+      },
+
+      category: {
+        type: String
+      },
+
       image: {
         type: String
       },
@@ -42,9 +50,42 @@ const orderSchema = new mongoose.Schema({
 
       quantity: {
         type: Number
+      },
+
+      baseSubtotal: {
+        type: Number,
+        default: 0
+      },
+
+      prescriptionFee: {
+        type: Number,
+        default: 0
+      },
+
+      prescriptionUploaded: {
+        type: Boolean,
+        default: false
+      },
+
+      prescriptionImagePath: {
+        type: String
+      },
+
+      itemTotal: {
+        type: Number,
+        default: 0
       }
     }
   ],
+
+  productSummary: {
+    type: String
+  },
+
+  hasPrescriptionImages: {
+    type: Boolean,
+    default: false
+  },
 
   totalPrice: {
     type: Number,

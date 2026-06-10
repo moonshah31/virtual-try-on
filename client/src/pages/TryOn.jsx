@@ -1,157 +1,188 @@
-import { useEffect, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
+  import { useCallback, useEffect, useRef, useState } from "react";
+  import { useLocation } from "react-router-dom";
 
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
-import ScreenshotModal from "../components/ScreenshotModal";
+  import Navbar from "../components/Navbar";
+  import Footer from "../components/Footer";
+  import ScreenshotModal from "../components/ScreenshotModal";
 
-import glassesImg from "../assets/accessories/glasses.png";
+  import { FaceMesh } from "@mediapipe/face_mesh";
+  import { Camera } from "@mediapipe/camera_utils";
 
-import { FaceMesh } from "@mediapipe/face_mesh";
-import { Camera } from "@mediapipe/camera_utils";
+  import "../styles/styles.css";
 
-import "../styles/styles.css";
-
-function TryOn() {
-
-  const location = useLocation();
-
-  // =========================
-  // PRODUCTS ARRAY
-  // =========================
-  const products =
-    location.state?.products || [];
-
-  const initialProduct =
-    location.state?.product || null;
-
-  // =========================
-  // CURRENT PRODUCT INDEX
-  // =========================
-  const initialIndex = products.findIndex(
-    (p) => p._id === initialProduct?._id
+  const smoothValue = (
+    previous,
+    current,
+    smoothness = 0.75
+  ) => (
+    previous * smoothness +
+    current * (1 - smoothness)
   );
 
-  const [currentIndex, setCurrentIndex] = useState(
-    initialIndex >= 0 ? initialIndex : 0
-  );
+  function TryOn() {
 
-  const selectedProduct =
-    products.length > 0
-      ? products[currentIndex]
-      : initialProduct;
+    const location = useLocation();
 
-  // =========================
-  // REFS
-  // =========================
-  const videoRef = useRef(null);
+    // =========================
+    // PRODUCTS ARRAY
+    // =========================
+    const products =
+      location.state?.products || [];
 
-  const canvasRef = useRef(null);
+    const initialProduct =
+      location.state?.product || null;
 
-  const overlayImageRef = useRef(null);
-
-  // =========================
-  // SCREENSHOT STATES
-  // =========================
-  const [capturedImage, setCapturedImage] =
-    useState(null);
-
-  const [showPreview, setShowPreview] =
-    useState(false);
-
-  // =========================
-  // NEXT PRODUCT
-  // =========================
-  const nextProduct = () => {
-
-    if (products.length === 0) return;
-
-    setCurrentIndex((prev) =>
-      prev === products.length - 1
-        ? 0
-        : prev + 1
+    // =========================
+    // CURRENT PRODUCT INDEX
+    // =========================
+    const initialIndex = products.findIndex(
+      (p) => p._id === initialProduct?._id
     );
-  };
 
-  // =========================
-  // PREVIOUS PRODUCT
-  // =========================
-  const prevProduct = () => {
-
-    if (products.length === 0) return;
-
-    setCurrentIndex((prev) =>
-      prev === 0
-        ? products.length - 1
-        : prev - 1
+    const [currentIndex, setCurrentIndex] = useState(
+      initialIndex >= 0 ? initialIndex : 0
     );
-  };
 
-  // =========================
-  // SCREENSHOT
-  // =========================
-  const captureScreenshot = () => {
+    const selectedProduct =
+      products.length > 0
+        ? products[currentIndex]
+        : initialProduct;
 
-    const canvas = canvasRef.current;
+    // =========================
+    // REFS
+    // =========================
+    const videoRef = useRef(null);
 
-    if (!canvas) return;
+    const canvasRef = useRef(null);
 
-    const image =
-      canvas.toDataURL("image/png");
+    const overlayImageRef = useRef(null);
 
-    setCapturedImage(image);
+    // =========================
+    // SCREENSHOT STATES
+    // =========================
+    const [capturedImage, setCapturedImage] =
+      useState(null);
 
-    setShowPreview(true);
-  };
+    const [showPreview, setShowPreview] =
+      useState(false);
 
-  const retakeScreenshot = () => {
+    // =========================
+    // NEXT PRODUCT
+    // =========================
+    const nextProduct = () => {
 
-    setCapturedImage(null);
+      if (products.length === 0) return;
 
-    setShowPreview(false);
-  };
-
-  // =========================
-  // LOAD PRODUCT IMAGE
-  // =========================
-  useEffect(() => {
-
-  const img = new Image();
-
-img.crossOrigin = "anonymous";
-
-img.src = selectedProduct
-  ? selectedProduct.image
-  : glassesImg;
-
-    img.onload = () => {
-
-      overlayImageRef.current = img;
+      setCurrentIndex((prev) =>
+        prev === products.length - 1
+          ? 0
+          : prev + 1
+      );
     };
 
-  }, [selectedProduct]);
+    // =========================
+    // PREVIOUS PRODUCT
+    // =========================
+    const prevProduct = () => {
+
+      if (products.length === 0) return;
+
+      setCurrentIndex((prev) =>
+        prev === 0
+          ? products.length - 1
+          : prev - 1
+      );
+    };
+
+    // =========================
+    // SCREENSHOT
+    // =========================
+    const captureScreenshot = () => {
+
+      const canvas = canvasRef.current;
+
+      if (!canvas) return;
+
+      const image =
+        canvas.toDataURL("image/png");
+
+      setCapturedImage(image);
+
+      setShowPreview(true);
+    };
+
+    const retakeScreenshot = () => {
+
+      setCapturedImage(null);
+
+      setShowPreview(false);
+    };
+
+    // =========================
+    // LOAD PRODUCT IMAGE
+    // =========================
+    useEffect(() => {
+
+    if (!selectedProduct) {
+      overlayImageRef.current = null;
+      return;
+    }
+
+    const img = new Image();
+
+  img.crossOrigin = "anonymous";
+
+  img.src = selectedProduct.image;
+
+      img.onload = () => {
+
+        overlayImageRef.current = img;
+      };
+
+    }, [selectedProduct]);
+
+    // =========================
+    // DRAW RESULTS
+    // =========================
+    const previousPositionsRef = useRef({
+      glasses: {
+        x: 0,
+        y: 0,
+        angle: 0
+      },
+      hat: {
+        x: 0,
+        y: 0,
+        angle: 0
+      },
+      earring: {
+        x: 0,
+        y: 0
+      }
+    });
 
   // =========================
   // DRAW RESULTS
   // =========================
-  const onResults = (results) => {
+  const onResults = useCallback((results) => {
+    const previousPositions =
+      previousPositionsRef.current;
 
     const canvasElement =
       canvasRef.current;
 
     if (!canvasElement) return;
 
-    const canvasCtx = canvasElement.getContext(
-  "2d",
-  {
-    willReadFrequently: true
-  }
-);
+    const canvasCtx =
+      canvasElement.getContext(
+        "2d",
+        {
+          willReadFrequently: true
+        }
+      );
 
     const img =
       overlayImageRef.current;
-
-    if (!img) return;
 
     canvasCtx.save();
 
@@ -163,7 +194,7 @@ img.src = selectedProduct
     );
 
     // =========================
-    // CAMERA FEED
+    // DRAW CAMERA
     // =========================
     canvasCtx.drawImage(
       results.image,
@@ -173,327 +204,664 @@ img.src = selectedProduct
       canvasElement.height
     );
 
+    if (!img) {
+      canvasCtx.restore();
+      return;
+    }
+
     // =========================
-    // FACE LANDMARKS
+    // LANDMARKS
     // =========================
     if (results.multiFaceLandmarks) {
 
       for (const landmarks of results.multiFaceLandmarks) {
 
-        const w = canvasElement.width;
+        const w =
+          canvasElement.width;
 
-        const h = canvasElement.height;
+        const h =
+          canvasElement.height;
 
-        // =========================
-        // 👓 GLASSES
-        // =========================
-        if (
-          !selectedProduct ||
-          selectedProduct.category === "glasses"
-        ) {
+       // =====================================
+// 👓 GLASSES
+// =====================================
+if (
+  selectedProduct &&
+  selectedProduct.category === "glasses"
+) {
 
-          const leftEye = landmarks[33];
+  // =====================================
+  // LANDMARKS
+  // =====================================
+  const leftEye =
+    landmarks[33];
 
-          const rightEye = landmarks[263];
+  const rightEye =
+    landmarks[263];
 
-          const leftX = leftEye.x * w;
+  const noseBridge =
+    landmarks[168];
 
-          const leftY = leftEye.y * h;
+  const leftTemple =
+    landmarks[127];
 
-          const rightX = rightEye.x * w;
+  const rightTemple =
+    landmarks[356];
 
-          const rightY = rightEye.y * h;
+  // =====================================
+  // COORDINATES
+  // =====================================
+  const leftX =
+    leftEye.x * w;
 
-          const eyeDistance =
-            Math.abs(rightX - leftX);
+  const leftY =
+    leftEye.y * h;
 
-          const width =
-            eyeDistance * 2;
+  const rightX =
+    rightEye.x * w;
 
-          const height =
-            width * 0.5;
+  const rightY =
+    rightEye.y * h;
 
-          const centerX =
-            (leftX + rightX) / 2;
+  const noseX =
+    noseBridge.x * w;
 
-          const centerY =
-            (leftY + rightY) / 2;
+  const noseY =
+    noseBridge.y * h;
 
-          const angle = Math.atan2(
-            rightY - leftY,
-            rightX - leftX
-          );
+  const leftTempleX =
+    leftTemple.x * w;
 
-          canvasCtx.save();
+  const rightTempleX =
+    rightTemple.x * w;
 
-          canvasCtx.translate(
-            centerX,
-            centerY
-          );
+  // =====================================
+  // FACE WIDTH
+  // =====================================
+  const faceWidth =
+    Math.abs(
+      rightTempleX -
+      leftTempleX
+    );
 
-          canvasCtx.rotate(angle);
+  // =====================================
+  // EYE DISTANCE
+  // =====================================
+  const eyeDistance =
+    Math.abs(
+      rightX - leftX
+    );
 
-          canvasCtx.drawImage(
-            img,
-            -width / 2,
-            -height / 2,
-            width,
-            height
-          );
+  // =====================================
+  // FACE ROTATION
+  // =====================================
+  const rotationFactor =
+    Math.abs(
+      leftTemple.x -
+      rightTemple.x
+    );
 
-          canvasCtx.restore();
-        }
+  // =====================================
+  // WIDTH
+  // =====================================
+  let width =
+    faceWidth * 1.02;
 
-        // =========================
-        // 💎 EARRINGS
-        // =========================
-        if (
-          selectedProduct &&
-          selectedProduct.category === "earring"
-        ) {
+  // Compress slightly when head turns
+  width *= (
+    1 -
+    (1 - rotationFactor) * 0.18
+  );
 
-          const leftEar =
-            landmarks[177];
+  // Normalize
+  width = Math.min(
+    Math.max(width, 150),
+    290
+  );
 
-          const rightEar =
-            landmarks[401];
+  // =====================================
+  // HEIGHT
+  // =====================================
+  const aspectRatio =
+    img.height / img.width;
 
-          const leftX =
-            leftEar.x * w;
+  const height =
+    width * aspectRatio;
 
-          const leftY =
-            leftEar.y * h;
+  // =====================================
+  // POSITION
+  // =====================================
 
-          const rightX =
-            rightEar.x * w;
+  // Better nose anchoring
+  let centerX =
+    noseX;
 
-          const rightY =
-            rightEar.y * h;
+  let centerY =
+    noseY - (
+      eyeDistance * 0.04
+    );
 
-          const faceWidth =
-            Math.abs(
-              (landmarks[454].x -
-                landmarks[234].x) * w
-            );
+  // =====================================
+  // ROTATION
+  // =====================================
+  let angle =
+    Math.atan2(
+      rightY - leftY,
+      rightX - leftX
+    );
 
-          const size =
-            faceWidth * 0.12;
+  // =====================================
+  // FACE DEPTH ADJUSTMENT
+  // =====================================
+  const depthScale =
+    eyeDistance / 120;
 
-          // LEFT
-          canvasCtx.drawImage(
-            img,
-            leftX - size / 2,
-            leftY + size * 0.2,
-            size,
-            size
-          );
+  centerY +=
+    depthScale * 2;
 
-          // RIGHT
-          canvasCtx.save();
+  // =====================================
+  // SMOOTHING
+  // =====================================
+  centerX = smoothValue(
+    previousPositions.glasses.x,
+    centerX,
+    0.84
+  );
 
-          canvasCtx.translate(
-            rightX,
-            rightY + size * 0.2
-          );
+  centerY = smoothValue(
+    previousPositions.glasses.y,
+    centerY,
+    0.84
+  );
 
-          canvasCtx.scale(-1, 1);
+  angle = smoothValue(
+    previousPositions.glasses.angle,
+    angle,
+    0.88
+  );
 
-          canvasCtx.drawImage(
-            img,
-            -size / 2,
-            0,
-            size,
-            size
-          );
+  previousPositions.glasses = {
+    x: centerX,
+    y: centerY,
+    angle
+  };
 
-          canvasCtx.restore();
-        }
+  // =====================================
+  // DRAW
+  // =====================================
+  canvasCtx.save();
 
-        // =========================
-        // 🎩 HAT
-        // =========================
-        if (
-          selectedProduct &&
-          selectedProduct.category === "hat"
-        ) {
+  // Better shadows
+  canvasCtx.shadowColor =
+    "rgba(0,0,0,0.30)";
 
-          const forehead =
-            landmarks[10];
+  canvasCtx.shadowBlur = 12;
 
-          const leftFace =
-            landmarks[234];
+  canvasCtx.shadowOffsetY = 3;
 
-          const rightFace =
-            landmarks[454];
+  // Slight transparency
+  canvasCtx.globalAlpha = 0.98;
 
-          const foreheadX =
-            forehead.x * w;
+  canvasCtx.translate(
+    centerX,
+    centerY
+  );
 
-          const foreheadY =
-            forehead.y * h;
+  canvasCtx.rotate(angle);
 
-          const faceWidth =
-            Math.abs(
-              (rightFace.x -
-                leftFace.x) * w
-            );
+  // Slight perspective compression
+  canvasCtx.scale(
+    1,
+    0.98
+  );
 
-          const width =
-            faceWidth * 1.5;
+  canvasCtx.drawImage(
+    img,
+    -width / 2,
+    -height / 2 + 10  ,
+    width,
+    height
+  );
 
-          const height =
-            width * 0.8;
+  canvasCtx.restore();
+}
 
-          canvasCtx.drawImage(
-            img,
-            foreheadX - width / 2,
-            foreheadY - height + 20,
-            width,
-            height
-          );
-        }
+       // =====================================
+// 💎 EARRINGS
+// =====================================
+if (
+  selectedProduct &&
+  selectedProduct.category === "earring"
+) {
+
+  // =====================================
+  // LANDMARKS
+  // =====================================
+  const leftEar =
+  landmarks[234 ];
+
+const rightEar =
+  landmarks[454];
+
+  const nose =
+    landmarks[1];
+
+  const forehead =
+    landmarks[10];
+
+  // =====================================
+  // COORDINATES
+  // =====================================
+  const leftX =
+    leftEar.x * w;
+
+  const leftY =
+    leftEar.y * h;
+
+  const rightX =
+    rightEar.x * w;
+
+  const rightY =
+    rightEar.y * h;
+
+  // =====================================
+  // FACE WIDTH
+  // =====================================
+  const faceWidth =
+    Math.abs(
+      (rightEar.x - leftEar.x) * w
+    );
+
+  // =====================================
+  // SMALL STUD SIZE
+  // =====================================
+  let size =
+    faceWidth * 0.045;
+
+  size = Math.min(
+    Math.max(size, 10),
+    22
+  );
+
+  // =====================================
+  // HEAD ROTATION
+  // =====================================
+  const faceTurn =
+    nose.x - forehead.x;
+
+  // =====================================
+  // LEFT VISIBILITY
+  // =====================================
+  let leftOpacity = 0;
+
+  if (faceTurn > -0.015) {
+    leftOpacity = Math.min(
+      Math.abs(faceTurn) * 50,
+      1
+    );
+  }
+
+  // =====================================
+  // RIGHT VISIBILITY
+  // =====================================
+  let rightOpacity = 0;
+
+  if (faceTurn < 0.015) {
+    rightOpacity = Math.min(
+      Math.abs(faceTurn) * 50,
+      1
+    );
+  }
+
+  // =====================================
+  // LEFT EARRING
+  // =====================================
+  if (leftOpacity > 0.05) {
+
+    canvasCtx.save();
+
+    canvasCtx.globalAlpha =
+      leftOpacity;
+
+    canvasCtx.shadowColor =
+      "rgba(0,0,0,0.2)";
+
+    canvasCtx.shadowBlur = 4;
+
+    canvasCtx.drawImage(
+      img,
+      leftX - size * 0.55,
+leftY + size * 0.38,
+      size,
+      size
+    );
+
+    canvasCtx.restore();
+  }
+
+  // =====================================
+  // RIGHT EARRING
+  // =====================================
+  if (rightOpacity > 0.05) {
+
+    canvasCtx.save();
+
+    canvasCtx.globalAlpha =
+      rightOpacity;
+
+    canvasCtx.shadowColor =
+      "rgba(0,0,0,0.2)";
+
+    canvasCtx.shadowBlur = 4;
+
+    canvasCtx.drawImage(
+      img,
+     rightX - size * 0.45,
+rightY + size * 0.38,
+      size,
+      size
+    );
+
+    canvasCtx.restore();
+  }
+}
+
+        // =====================================
+// 🎩 HAT
+// =====================================
+if (
+  selectedProduct &&
+  selectedProduct.category === "hat"
+) {
+
+  const forehead =
+    landmarks[10];
+
+  const leftFace =
+    landmarks[234];
+
+  const rightFace =
+    landmarks[454];
+
+  const leftEye =
+    landmarks[33];
+
+  const rightEye =
+    landmarks[263];
+
+  // =====================================
+  // POSITION
+  // =====================================
+  let foreheadX =
+    forehead.x * w;
+
+  let foreheadY =
+    forehead.y * h;
+
+  // =====================================
+  // FACE WIDTH
+  // =====================================
+  const faceWidth =
+    Math.abs(
+      (
+        rightFace.x -
+        leftFace.x
+      ) * w
+    );
+
+  // =====================================
+  // BETTER SCALING
+  // =====================================
+  let width =
+    faceWidth * 1.08;
+
+  // Better normalization
+  width = Math.min(
+    Math.max(width, 180),
+    330
+  );
+
+  // Preserve PNG ratio
+  const aspectRatio =
+    img.height / img.width;
+
+  // Fix flat/stretch issue
+  const height =
+    width *
+    aspectRatio *
+    0.92;
+
+  // =====================================
+  // HEAD ROTATION
+  // =====================================
+  let angle =
+    Math.atan2(
+      rightEye.y -
+        leftEye.y,
+      rightEye.x -
+        leftEye.x
+    );
+
+  // Slight backward tilt
+  angle -= 0.06;
+
+  // =====================================
+  // POSITIONING
+  // =====================================
+
+  // Raise hat higher
+  foreheadY -= 8;
+
+  // Slight backward offset
+  foreheadX -= Math.sin(angle) * 8;
+
+  // =====================================
+  // SMOOTHING
+  // =====================================
+  foreheadX =
+    smoothValue(
+      previousPositions.hat.x,
+      foreheadX,
+      0.84
+    );
+
+  foreheadY =
+    smoothValue(
+      previousPositions.hat.y,
+      foreheadY,
+      0.84
+    );
+
+  angle =
+    smoothValue(
+      previousPositions.hat.angle,
+      angle,
+      0.86
+    );
+
+  previousPositions.hat = {
+    x: foreheadX,
+    y: foreheadY,
+    angle
+  };
+
+  // =====================================
+  // DRAW
+  // =====================================
+  canvasCtx.save();
+
+  canvasCtx.shadowColor =
+    "rgba(0,0,0,0.25)";
+
+  canvasCtx.shadowBlur = 14;
+
+  canvasCtx.shadowOffsetY = 4;
+
+  canvasCtx.globalAlpha = 0.99;
+
+  canvasCtx.translate(
+    foreheadX,
+    foreheadY
+  );
+
+  canvasCtx.rotate(angle);
+
+  canvasCtx.drawImage(
+    img,
+    -width / 2,
+    -height + 35,
+    width,
+    height
+  );
+
+  canvasCtx.restore();
+}
       }
     }
 
     canvasCtx.restore();
-  };
-
-  // =========================
-  // START FACEMESH
-  // =========================
-  useEffect(() => {
-
-    if (!videoRef.current) return;
-
-    const faceMesh =
-      new FaceMesh({
-
-        locateFile: (file) =>
-          `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
-      });
-
-    faceMesh.setOptions({
-
-      maxNumFaces: 1,
-
-      refineLandmarks: true,
-
-      minDetectionConfidence: 0.5,
-
-      minTrackingConfidence: 0.5
-    });
-
-    faceMesh.onResults(onResults);
-
-    const camera =
-      new Camera(videoRef.current, {
-
-        onFrame: async () => {
-
-          await faceMesh.send({
-            image: videoRef.current
-          });
-        },
-
-        width: 640,
-
-        height: 480
-      });
-
-    camera.start();
-
-    return () => {
-
-      camera.stop();
-    };
-
   }, [selectedProduct]);
+    // =========================
+    // START FACEMESH
+    // =========================
+    useEffect(() => {
 
-  return (
-    <>
-      <Navbar />
+      if (!videoRef.current) return;
 
-      <div className="container">
- <div className="tryon-wrapper">
-        <h1>Virtual Try-On</h1>
+      const faceMesh =
+        new FaceMesh({
 
-        {/* ========================= */}
-        {/* PRODUCT SWITCHER */}
-        {/* ========================= */}
-        <div className="product-switcher">
+          locateFile: (file) =>
+            `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+        });
 
-          <button
-            className="switch-btn"
-            onClick={prevProduct}
-          >
-            ◀
-          </button>
+      faceMesh.setOptions({
 
-          <div className="current-product-banner">
+        maxNumFaces: 1,
 
-            <p>Currently Trying</p>
+        refineLandmarks: true,
 
-            <h2>
-              {selectedProduct?.name}
-            </h2>
+        minDetectionConfidence: 0.5,
+
+        minTrackingConfidence: 0.5
+      });
+
+      faceMesh.onResults(onResults);
+
+      const camera =
+        new Camera(videoRef.current, {
+
+          onFrame: async () => {
+
+            await faceMesh.send({
+              image: videoRef.current
+            });
+          },
+
+          width: 640,
+
+          height: 480
+        });
+
+      camera.start();
+
+      return () => {
+
+        camera.stop();
+      };
+
+    }, [onResults]);
+
+    return (
+      <>
+        <Navbar />
+
+        <div className="container">
+  <div className="tryon-wrapper">
+          <h1>Virtual Try-On</h1>
+
+          {/* ========================= */}
+          {/* PRODUCT SWITCHER */}
+          {/* ========================= */}
+          <div className="product-switcher">
+
+            <button
+              className="switch-btn"
+              onClick={prevProduct}
+              aria-label="Previous product"
+            >
+              &lt;
+            </button>
+
+            <div className="current-product-banner">
+
+              <p>Currently Trying</p>
+
+              <h2>
+                {selectedProduct?.name || "Choose a product first"}
+              </h2>
+
+            </div>
+
+            <button
+              className="switch-btn"
+              onClick={nextProduct}
+              aria-label="Next product"
+            >
+              &gt;
+            </button>
 
           </div>
 
-          <button
-            className="switch-btn"
-            onClick={nextProduct}
-          >
-            ▶
-          </button>
+          {/* ========================= */}
+          {/* TRY ON AREA */}
+          {/* ========================= */}
+          <div className="tryon-container">
 
+            {/* HIDDEN VIDEO */}
+            <video
+              ref={videoRef}
+              style={{ display: "none" }}
+            />
+
+            {/* CANVAS */}
+        <canvas
+    ref={canvasRef}
+    width="640"
+    height="480"
+    className="tryon-video"
+  />
+
+            <p className="privacy-note">
+              We do not store any image of you.
+            </p>
+
+            {/* SCREENSHOT BUTTON */}
+            <button
+              className="button-primary capture-btn"
+              onClick={captureScreenshot}
+            >
+              Capture Screenshot
+            </button>
+
+          </div>
         </div>
+  </div>
+        <Footer />
 
         {/* ========================= */}
-        {/* TRY ON AREA */}
+        {/* SCREENSHOT MODAL */}
         {/* ========================= */}
-        <div className="tryon-container">
+        <ScreenshotModal
+          image={capturedImage}
+          isOpen={showPreview}
+          onClose={() =>
+            setShowPreview(false)
+          }
+          onRetake={retakeScreenshot}
+        />
+      </>
+    );
+  } 
 
-          {/* HIDDEN VIDEO */}
-          <video
-            ref={videoRef}
-            style={{ display: "none" }}
-          />
-
-          {/* CANVAS */}
-       <canvas
-  ref={canvasRef}
-  width="640"
-  height="480"
-  className="tryon-video"
-  willReadFrequently="true"
-/>
-
-          {/* SCREENSHOT BUTTON */}
-          <button
-            className="button-primary capture-btn"
-            onClick={captureScreenshot}
-          >
-            📸 Capture Screenshot
-          </button>
-
-        </div>
-      </div>
-</div>
-      <Footer />
-
-      {/* ========================= */}
-      {/* SCREENSHOT MODAL */}
-      {/* ========================= */}
-      <ScreenshotModal
-        image={capturedImage}
-        isOpen={showPreview}
-        onClose={() =>
-          setShowPreview(false)
-        }
-        onRetake={retakeScreenshot}
-      />
-    </>
-  );
-}
-
-export default TryOn;
+  export default TryOn;

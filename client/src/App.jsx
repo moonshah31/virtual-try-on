@@ -3,14 +3,19 @@ import Home from "./pages/Home.jsx";
 import Products from "./pages/Products.jsx";
 import TryOn from "./pages/TryOn.jsx";
 import Cart from "./pages/Cart";
+import Admin from "./pages/Admin.jsx";
 import Checkout from "./pages/Checkout";
+
 
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        
+        <Route
+  path="/admin"
+  element={<Admin />}
+/>
         <Route path="/" element={<Home />} />
         <Route path="/products" element={<Products />} />
         <Route path="/cart" element={<Cart />} />

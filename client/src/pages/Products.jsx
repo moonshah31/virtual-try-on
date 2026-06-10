@@ -1,27 +1,61 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import ProductModal from "../components/productModal";
+import { API_BASE_URL } from "../config/api";
+import { normalizeProduct } from "../utils/productCategories";
 import "../styles/styles.css";
-import { useNavigate } from "react-router-dom";
+
+const categories = [
+  { label: "All", value: "all" },
+  { label: "Glasses", value: "glasses" },
+  { label: "Hats", value: "hat" },
+  { label: "Earrings", value: "earring" }
+];
+
 function Products() {
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [category, setCategory] = useState("all");
-const navigate = useNavigate();
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    fetch("http://localhost:5000/api/products")
-      .then((res) => res.json())
-      .then((data) => setProducts(data))
-      .catch((err) => console.error(err));
+    const controller = new AbortController();
+
+    fetch(`${API_BASE_URL}/products`, {
+      signal: controller.signal
+    })
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error("Failed to fetch products");
+        }
+
+        return res.json();
+      })
+      .then((data) => setProducts(data.map(normalizeProduct)))
+      .catch((fetchError) => {
+        if (fetchError.name !== "AbortError") {
+          console.error(fetchError);
+          setError("Products could not be loaded.");
+        }
+      })
+      .finally(() => setIsLoading(false));
+
+    return () => controller.abort();
   }, []);
 
-  const filteredProducts =
-    category === "all"
-      ? products
-      : products.filter((p) => p.category === category);
+  const filteredProducts = useMemo(
+    () => (
+      category === "all"
+        ? products
+        : products.filter((product) => product.category === category)
+    ),
+    [category, products]
+  );
 
   const openModal = (product) => {
     setSelectedProduct(product);
@@ -33,71 +67,81 @@ const navigate = useNavigate();
     setIsModalOpen(false);
   };
 
- 
-
-  return (
-    <>
-      <Navbar />
-
-      <div className="container">
-        <h1>All Products</h1>
-
-        {/* Category Filter */}
-        <div style={{ marginBottom: "20px" }}>
-          <button onClick={() => setCategory("all")} className="button-primary">
-            All
-          </button>{" "}
-          <button onClick={() => setCategory("glasses")} className="button-primary">
-            Glasses
-          </button>{" "}
-          <button onClick={() => setCategory("hat")} className="button-primary">
-            Hats
-          </button>{" "}
-          <button onClick={() => setCategory("jewellery")} className="button-primary">
-            Jewellery
-          </button>{" "}
-          <button onClick={() => setCategory("lipstick")} className="button-primary">
-            Lipstick
-          </button>
-        </div>
-
-        {/* Products Grid */}
-        <div className="product-grid">
-          {filteredProducts.map((product) => (
-            <div
-              className="product-card"
-              key={product._id}
-              onClick={() => openModal(product)}
-            >
-              <img src={product.image} alt={product.name} />
-              <h3>{product.name}</h3>
-              <p>Rs. {product.price}</p>
-              <button
-  className="button-primary"
-  onClick={(e) => {
-    e.stopPropagation();
-
+  const tryProduct = (product) => {
     navigate("/tryon", {
       state: {
         product,
         products: filteredProducts
       }
     });
-  }}
->
-  Try On
-</button>
-            </div>
+  };
+
+  return (
+    <>
+      <Navbar />
+
+      <main className="container">
+        <div className="page-heading">
+          <p className="eyebrow">Catalog</p>
+          <h1>All Products</h1>
+        </div>
+
+        <div className="filter-tabs" aria-label="Product categories">
+          {categories.map((item) => (
+            <button
+              key={item.value}
+              className={
+                category === item.value
+                  ? "filter-tab active"
+                  : "filter-tab"
+              }
+              onClick={() => setCategory(item.value)}
+            >
+              {item.label}
+            </button>
           ))}
         </div>
-      </div>
 
-      {/* Product Modal */}
+        {isLoading && (
+          <p className="empty-state">Loading products...</p>
+        )}
+
+        {error && (
+          <p className="empty-state">{error}</p>
+        )}
+
+        {!isLoading && !error && filteredProducts.length === 0 && (
+          <p className="empty-state">No products found in this category.</p>
+        )}
+
+        <div className="product-grid">
+          {filteredProducts.map((product) => (
+            <article
+              className="product-card"
+              key={product._id || product.id || product.name}
+              onClick={() => openModal(product)}
+            >
+              <img src={product.image} alt={product.name} loading="lazy" />
+              <h3>{product.name}</h3>
+              <p className="product-price">Rs. {product.price}</p>
+              <button
+                className="button-primary"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  tryProduct(product);
+                }}
+              >
+                Try On
+              </button>
+            </article>
+          ))}
+        </div>
+      </main>
+
       <ProductModal
         product={selectedProduct}
         isOpen={isModalOpen}
         onClose={closeModal}
-      
       />
 
       <Footer />
