@@ -7,18 +7,19 @@ import {
   getOrders,
   updateOrder
 } from "../controllers/orderController.js";
+import { requireAdminAuth } from "../middleware/adminAuth.js";
 
 const router = express.Router();
 
 router
   .route("/")
-  .get(getOrders)
+  .get(requireAdminAuth, getOrders)
   .post(createOrder);
 
 router
   .route("/:id")
-  .get(getOrderById)
-  .put(updateOrder)
-  .delete(deleteOrder);
+  .get(requireAdminAuth, getOrderById)
+  .put(requireAdminAuth, updateOrder)
+  .delete(requireAdminAuth, deleteOrder);
 
 export default router;

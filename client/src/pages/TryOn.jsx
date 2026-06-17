@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
-import ScreenshotModal from "../components/ScreenshotModal";
+import Navbar from "../components/navbar.jsx";
+import Footer from "../components/footer.jsx";
+import ScreenshotModal from "../components/ScreenshotModal.jsx";
 
 import { FaceMesh } from "@mediapipe/face_mesh";
 import { Camera } from "@mediapipe/camera_utils";
@@ -86,7 +86,6 @@ function TryOn() {
   // needs to be re-registered with FaceMesh.
   // =====================================================
   const selectedProductRef = useRef(selectedProduct);
-  selectedProductRef.current = selectedProduct;
 
   // =========================
   // REFS
@@ -114,7 +113,8 @@ function TryOn() {
     hat: false
   });
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    selectedProductRef.current = selectedProduct;
     positionsInitializedRef.current = {
       glasses: false,
       hat: false

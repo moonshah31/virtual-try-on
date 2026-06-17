@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
-import ProductModal from "../components/productModal";
-import { API_BASE_URL } from "../config/api";
-import { normalizeProduct } from "../utils/productCategories";
+import Navbar from "../components/navbar.jsx";
+import Footer from "../components/footer.jsx";
+import ProductModal from "../components/productModal.jsx";
+import { API_BASE_URL } from "../config/api.js";
+import { normalizeProduct } from "../utils/productCategories.js";
 import "../styles/styles.css";
 
 const categories = [

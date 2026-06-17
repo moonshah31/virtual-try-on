@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { CartContext } from "./CartContextCore";
-import { getProductKey } from "../utils/productCategories";
+import { CartContext } from "./CartContextCore.js";
+import { getProductKey } from "../utils/productCategories.js";
 
 
 export const CartProvider = ({ children }) => {

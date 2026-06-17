@@ -6,18 +6,19 @@ import {
   getProducts,
   updateProduct
 } from "../controllers/productController.js";
+import { requireAdminAuth } from "../middleware/adminAuth.js";
 
 const router = express.Router();
 
 router
   .route("/")
   .get(getProducts)
-  .post(createProduct);
+  .post(requireAdminAuth, createProduct);
 
 router
   .route("/:id")
   .get(getProductById)
-  .put(updateProduct)
-  .delete(deleteProduct);
+  .put(requireAdminAuth, updateProduct)
+  .delete(requireAdminAuth, deleteProduct);
 
 export default router;

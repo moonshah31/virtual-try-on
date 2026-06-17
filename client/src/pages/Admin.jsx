@@ -1,9 +1,7 @@
-import { useEffect, useState } from "react";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
-import { API_BASE_URL } from "../config/api";
-
-const API_ORIGIN = API_BASE_URL.replace("/api", "");
+import { useCallback, useEffect, useState } from "react";
+import Navbar from "../components/navbar.jsx";
+import Footer from "../components/footer.jsx";
+import { API_BASE_URL, API_ORIGIN } from "../config/api.js";
 
 const getImageUrl = (path = "") => {
   if (!path) return "";
@@ -17,12 +15,14 @@ const getProductImageUrl = (path = "") => {
   return path.startsWith("/") ? path : `/${path}`;
 };
 
+const getStoredAdminToken = () => localStorage.getItem("adminToken") || "";
+
 function Admin() {
   // =========================
   // AUTH STATE
   // =========================
   const [isAuthenticated, setIsAuthenticated] = useState(
-    localStorage.getItem("adminAuthenticated") === "true"
+    Boolean(getStoredAdminToken())
   );
 
   const [loginForm, setLoginForm] = useState({
@@ -47,10 +47,14 @@ function Admin() {
 
   const [editingProductId, setEditingProductId] = useState(null);
 
+  const getAdminHeaders = useCallback(() => ({
+    Authorization: `Basic ${getStoredAdminToken()}`
+  }), []);
+
   // =========================
   // FETCH PRODUCTS
   // =========================
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/products`);
       const data = await response.json();
@@ -58,20 +62,22 @@ function Admin() {
     } catch (error) {
       console.log(error);
     }
-  };
+  }, []);
 
   // =========================
   // FETCH ORDERS
   // =========================
-  const fetchOrders = async () => {
+  const fetchOrders = useCallback(async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/orders`);
+      const response = await fetch(`${API_BASE_URL}/orders`, {
+        headers: getAdminHeaders()
+      });
       const data = await response.json();
       setOrders(data);
     } catch (error) {
       console.log(error);
     }
-  };
+  }, [getAdminHeaders]);
 
   // =========================
   // LOAD DATA AFTER LOGIN
@@ -81,7 +87,7 @@ function Admin() {
 
     fetchProducts();
     fetchOrders();
-  }, [isAuthenticated]);
+  }, [fetchOrders, fetchProducts, isAuthenticated]);
 
   // =========================
   // LOGIN (SECURE BACKEND)
@@ -101,7 +107,10 @@ function Admin() {
       const data = await res.json();
 
       if (data.success) {
-        localStorage.setItem("adminAuthenticated", "true");
+        localStorage.setItem(
+          "adminToken",
+          btoa(`${loginForm.username}:${loginForm.password}`)
+        );
         setIsAuthenticated(true);
       } else {
         alert("Invalid credentials");
@@ -117,7 +126,7 @@ function Admin() {
   // LOGOUT
   // =========================
   const logout = () => {
-    localStorage.removeItem("adminAuthenticated");
+    localStorage.removeItem("adminToken");
     setIsAuthenticated(false);
   };
 
@@ -150,7 +159,8 @@ function Admin() {
       const response = await fetch(url, {
         method,
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          ...getAdminHeaders()
         },
         body: JSON.stringify(form)
       });
@@ -213,7 +223,8 @@ function Admin() {
   const deleteProduct = async (id) => {
     try {
       await fetch(`${API_BASE_URL}/products/${id}`, {
-        method: "DELETE"
+        method: "DELETE",
+        headers: getAdminHeaders()
       });
 
       fetchProducts();
@@ -227,7 +238,8 @@ function Admin() {
 
     try {
       const response = await fetch(`${API_BASE_URL}/orders/${id}`, {
-        method: "DELETE"
+        method: "DELETE",
+        headers: getAdminHeaders()
       });
 
       if (!response.ok) {

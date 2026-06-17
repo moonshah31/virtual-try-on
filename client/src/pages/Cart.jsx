@@ -1,16 +1,16 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
-import { useCart } from "../context/useCart";
+import Navbar from "../components/navbar.jsx";
+import Footer from "../components/footer.jsx";
+import { useCart } from "../context/useCart.js";
 import {
   getItemTotal,
   getProductKey,
   getPrescriptionPath,
   isGlassesProduct,
   PRESCRIPTION_FEE,
-} from "../utils/productCategories";
-import { uploadPrescriptionImage } from "../utils/prescriptionUpload";
+} from "../utils/productCategories.js";
+import { uploadPrescriptionImage } from "../utils/prescriptionUpload.js";
 import "../styles/styles.css";
 
 function Cart() {

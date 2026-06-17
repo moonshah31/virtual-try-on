@@ -1,14 +1,14 @@
 import { useState } from "react";
 import "../styles/styles.css";
-import { useCart } from "../context/useCart";
+import { useCart } from "../context/useCart.js";
 import { useNavigate } from "react-router-dom";
 import {
   getProductDescription,
   getPrescriptionPath,
   isGlassesProduct,
   PRESCRIPTION_FEE
-} from "../utils/productCategories";
-import { uploadPrescriptionImage } from "../utils/prescriptionUpload";
+} from "../utils/productCategories.js";
+import { uploadPrescriptionImage } from "../utils/prescriptionUpload.js";
 
 const ProductModal = ({ product, isOpen, onClose }) => {
   const { addToCart } = useCart();

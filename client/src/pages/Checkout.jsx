@@ -1,15 +1,15 @@
 import { useMemo, useState } from "react";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
-import { API_BASE_URL } from "../config/api";
-import { useCart } from "../context/useCart";
+import Navbar from "../components/navbar.jsx";
+import Footer from "../components/footer.jsx";
+import { API_BASE_URL } from "../config/api.js";
+import { useCart } from "../context/useCart.js";
 import {
   getItemTotal,
   getProductKey,
   getPrescriptionPath,
   normalizeProductCategory,
   getPrescriptionFee
-} from "../utils/productCategories";
+} from "../utils/productCategories.js";
 import "../styles/styles.css";
 
 function Checkout() {

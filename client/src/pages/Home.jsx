@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
-import HowItWorks from "../components/howItWorks";
-import ProductModal from "../components/productModal";
-import CategoryShowcase from "../components/CategoryShowcase";
-import HomeBenefits from "../components/HomeBenefits";
-import { API_BASE_URL } from "../config/api";
-import { normalizeProduct } from "../utils/productCategories";
+import Navbar from "../components/navbar.jsx";
+import Footer from "../components/footer.jsx";
+import HowItWorks from "../components/howItWorks.jsx";
+import ProductModal from "../components/productModal.jsx";
+import CategoryShowcase from "../components/CategoryShowcase.jsx";
+import HomeBenefits from "../components/HomeBenefits.jsx";
+import { API_BASE_URL } from "../config/api.js";
+import { normalizeProduct } from "../utils/productCategories.js";
 import "../styles/styles.css";
 
 function Home() {

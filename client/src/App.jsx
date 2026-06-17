@@ -2,9 +2,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./pages/Home.jsx";
 import Products from "./pages/Products.jsx";
 import TryOn from "./pages/TryOn.jsx";
-import Cart from "./pages/Cart";
+import Cart from "./pages/Cart.jsx";
 import Admin from "./pages/Admin.jsx";
-import Checkout from "./pages/Checkout";
+import Checkout from "./pages/Checkout.jsx";
 
 
 
