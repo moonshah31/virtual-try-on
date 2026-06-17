@@ -42,7 +42,7 @@ function Home() {
   }, []);
 
   const trending = useMemo(
-    () => products.slice(0, 3),
+    () => products.slice(0, 4),
     [products]
   );
 

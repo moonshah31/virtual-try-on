@@ -7,12 +7,13 @@ import { fileURLToPath } from "node:url";
 import productRoutes from "./routes/productRoutes.js";
 import orderRoutes from "./routes/orderRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
-
-dotenv.config();
+import adminRoutes from "./routes/adminRoutes.js";
 
 const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+dotenv.config({ path: path.join(__dirname, ".env") });
 
 // Middleware
 app.use(cors());
@@ -23,11 +24,10 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);
 app.use("/api/uploads", uploadRoutes);
+app.use("/api/admin", adminRoutes);
 
 
 // 🔍 Debug env loading
-console.log("MONGO_URI =", process.env.MONGO_URI);
-
 // 🔗 MongoDB Connection
 mongoose
   .connect(process.env.MONGO_URI)

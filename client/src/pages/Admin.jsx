@@ -7,21 +7,36 @@ const API_ORIGIN = API_BASE_URL.replace("/api", "");
 
 const getImageUrl = (path = "") => {
   if (!path) return "";
-
   return path.startsWith("http") ? path : `${API_ORIGIN}${path}`;
 };
 
+const getProductImageUrl = (path = "") => {
+  if (!path) return "";
+  if (path.startsWith("http")) return path;
+  if (path.startsWith("/uploads/")) return `${API_ORIGIN}${path}`;
+  return path.startsWith("/") ? path : `/${path}`;
+};
+
 function Admin() {
+  // =========================
+  // AUTH STATE
+  // =========================
   const [isAuthenticated, setIsAuthenticated] = useState(
     localStorage.getItem("adminAuthenticated") === "true"
   );
+
   const [loginForm, setLoginForm] = useState({
     username: "",
     password: ""
   });
+
+  // =========================
+  // DASHBOARD STATE
+  // =========================
   const [activeTab, setActiveTab] = useState("products");
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
+
   const [form, setForm] = useState({
     name: "",
     price: "",
@@ -29,8 +44,12 @@ function Admin() {
     image: "",
     color: ""
   });
+
   const [editingProductId, setEditingProductId] = useState(null);
 
+  // =========================
+  // FETCH PRODUCTS
+  // =========================
   const fetchProducts = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/products`);
@@ -41,6 +60,9 @@ function Admin() {
     }
   };
 
+  // =========================
+  // FETCH ORDERS
+  // =========================
   const fetchOrders = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/orders`);
@@ -51,6 +73,9 @@ function Admin() {
     }
   };
 
+  // =========================
+  // LOAD DATA AFTER LOGIN
+  // =========================
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -58,23 +83,47 @@ function Admin() {
     fetchOrders();
   }, [isAuthenticated]);
 
-  const login = (e) => {
+  // =========================
+  // LOGIN (SECURE BACKEND)
+  // =========================
+  const login = async (e) => {
     e.preventDefault();
 
-    if (loginForm.username === "admin" && loginForm.password === "admin") {
-      localStorage.setItem("adminAuthenticated", "true");
-      setIsAuthenticated(true);
-      return;
-    }
+    try {
+      const res = await fetch(`${API_BASE_URL}/admin/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(loginForm)
+      });
 
-    alert("Invalid admin id or password");
+      const data = await res.json();
+
+      if (data.success) {
+        localStorage.setItem("adminAuthenticated", "true");
+        setIsAuthenticated(true);
+      } else {
+        alert("Invalid credentials");
+      }
+
+    } catch (error) {
+      console.log(error);
+      alert("Login failed");
+    }
   };
 
+  // =========================
+  // LOGOUT
+  // =========================
   const logout = () => {
     localStorage.removeItem("adminAuthenticated");
     setIsAuthenticated(false);
   };
 
+  // =========================
+  // HANDLE INPUT
+  // =========================
   const handleChange = (e) => {
     setForm({
       ...form,
@@ -82,6 +131,9 @@ function Admin() {
     });
   };
 
+  // =========================
+  // SAVE PRODUCT (ADD / EDIT)
+  // =========================
   const saveProduct = async () => {
     if (!form.name || !form.price || !form.image || !form.color) {
       alert("Fill all fields");
@@ -92,7 +144,9 @@ function Admin() {
       const url = editingProductId
         ? `${API_BASE_URL}/products/${editingProductId}`
         : `${API_BASE_URL}/products`;
+
       const method = editingProductId ? "PUT" : "POST";
+
       const response = await fetch(url, {
         method,
         headers: {
@@ -100,13 +154,15 @@ function Admin() {
         },
         body: JSON.stringify(form)
       });
+
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Product request failed");
+        throw new Error(data.message || "Request failed");
       }
 
       alert(editingProductId ? "Product Updated" : "Product Added");
+
       setForm({
         name: "",
         price: "",
@@ -114,13 +170,18 @@ function Admin() {
         image: "",
         color: ""
       });
+
       setEditingProductId(null);
       fetchProducts();
+
     } catch (error) {
       console.log(error);
     }
   };
 
+  // =========================
+  // EDIT PRODUCT
+  // =========================
   const editProduct = (product) => {
     setEditingProductId(product._id);
     setForm({
@@ -132,6 +193,9 @@ function Admin() {
     });
   };
 
+  // =========================
+  // CANCEL EDIT
+  // =========================
   const cancelEdit = () => {
     setEditingProductId(null);
     setForm({
@@ -143,32 +207,62 @@ function Admin() {
     });
   };
 
+  // =========================
+  // DELETE PRODUCT
+  // =========================
   const deleteProduct = async (id) => {
     try {
       await fetch(`${API_BASE_URL}/products/${id}`, {
         method: "DELETE"
       });
+
       fetchProducts();
     } catch (error) {
       console.log(error);
     }
   };
 
+  const deleteOrder = async (id) => {
+    if (!window.confirm("Delete this fulfilled order?")) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/orders/${id}`, {
+        method: "DELETE"
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || "Order delete failed");
+      }
+
+      fetchOrders();
+    } catch (error) {
+      console.log(error);
+      alert("Could not delete order");
+    }
+  };
+
+  // =========================
+  // LOGIN SCREEN
+  // =========================
   if (!isAuthenticated) {
     return (
       <>
         <Navbar />
+
         <main className="container admin-login-page">
           <form className="admin-login-card" onSubmit={login}>
             <h1>Admin Login</h1>
+
             <input
               type="text"
-              placeholder="Admin ID"
+              placeholder="Admin Username"
               value={loginForm.username}
               onChange={(e) =>
                 setLoginForm({ ...loginForm, username: e.target.value })
               }
             />
+
             <input
               type="password"
               placeholder="Password"
@@ -177,38 +271,42 @@ function Admin() {
                 setLoginForm({ ...loginForm, password: e.target.value })
               }
             />
+
             <button className="button-primary" type="submit">
               Login
             </button>
           </form>
         </main>
+
         <Footer />
       </>
     );
   }
 
+  // =========================
+  // DASHBOARD UI
+  // =========================
   return (
     <>
       <Navbar />
 
       <main className="container">
         <div className="admin-header">
-          <div>
-            <p className="eyebrow">Private</p>
-            <h1>Admin Dashboard</h1>
-          </div>
+          <h1>Admin Dashboard</h1>
           <button className="remove-btn" onClick={logout}>
             Logout
           </button>
         </div>
 
-        <div className="filter-tabs" aria-label="Admin sections">
+        {/* TABS */}
+        <div className="filter-tabs">
           <button
             className={activeTab === "products" ? "filter-tab active" : "filter-tab"}
             onClick={() => setActiveTab("products")}
           >
             Products
           </button>
+
           <button
             className={activeTab === "orders" ? "filter-tab active" : "filter-tab"}
             onClick={() => setActiveTab("orders")}
@@ -217,150 +315,120 @@ function Admin() {
           </button>
         </div>
 
+        {/* PRODUCTS */}
         {activeTab === "products" && (
           <>
             <section className="admin-panel">
               <h2>{editingProductId ? "Edit Product" : "Add Product"}</h2>
 
-              <input
-                type="text"
-                name="name"
-                placeholder="Product Name"
-                value={form.name}
-                onChange={handleChange}
-              />
+              <input name="name" value={form.name} onChange={handleChange} placeholder="Name" />
+              <input name="price" value={form.price} onChange={handleChange} placeholder="Price" />
+              <input name="image" value={form.image} onChange={handleChange} placeholder="Image URL" />
+              <input name="color" value={form.color} onChange={handleChange} placeholder="Color" />
 
-              <input
-                type="number"
-                name="price"
-                placeholder="Price"
-                value={form.price}
-                onChange={handleChange}
-              />
-
-              <select
-                name="category"
-                value={form.category}
-                onChange={handleChange}
-              >
+              <select name="category" value={form.category} onChange={handleChange}>
                 <option value="glasses">Glasses</option>
                 <option value="hat">Hat</option>
                 <option value="earring">Earring</option>
               </select>
 
-              <input
-                type="text"
-                name="image"
-                placeholder="Image URL"
-                value={form.image}
-                onChange={handleChange}
-              />
+              <button className="button-primary" onClick={saveProduct}>
+                {editingProductId ? "Update" : "Add"}
+              </button>
 
-              <input
-                type="text"
-                name="color"
-                placeholder="Color"
-                value={form.color}
-                onChange={handleChange}
-              />
-
-              <div className="admin-actions">
-                <button className="button-primary" onClick={saveProduct}>
-                  {editingProductId ? "Update Product" : "Add Product"}
+              {editingProductId && (
+                <button className="button-secondary" onClick={cancelEdit}>
+                  Cancel
                 </button>
-
-                {editingProductId && (
-                  <button className="button-secondary" onClick={cancelEdit}>
-                    Cancel
-                  </button>
-                )}
-              </div>
+              )}
             </section>
 
-            <div className="product-grid admin-product-grid">
-              {products.map((product) => (
-                <div className="product-card" key={product._id}>
-                  <img src={product.image} alt={product.name} />
-                  <h3>{product.name}</h3>
-                  <p>Rs. {product.price}</p>
-                  <p>{product.category}</p>
-                  <p>{product.color}</p>
+            <div className="product-grid">
+              {products.map((p) => (
+                <div key={p._id} className="product-card">
+                  <img src={getProductImageUrl(p.image)} alt={p.name} />
+                  <h3>{p.name}</h3>
+                  <p>Rs {p.price}</p>
+                  <p>{p.category}</p>
 
-                  <button
-                    className="button-primary"
-                    onClick={() => editProduct(product)}
-                  >
-                    Edit
-                  </button>
-
-                  <button
-                    className="remove-btn"
-                    onClick={() => deleteProduct(product._id)}
-                  >
-                    Delete
-                  </button>
+                  <div className="admin-actions">
+                    <button
+                      className="button-secondary"
+                      type="button"
+                      onClick={() => editProduct(p)}
+                    >
+                      Edit
+                    </button>
+                    <button
+                      className="remove-btn"
+                      type="button"
+                      onClick={() => deleteProduct(p._id)}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
           </>
         )}
 
+        {/* ORDERS */}
         {activeTab === "orders" && (
           <section className="orders-list">
-            {orders.length === 0 && (
-              <p className="empty-state">No orders yet.</p>
-            )}
-
             {orders.map((order) => (
-              <article className="order-card" key={order._id}>
+              <div key={order._id} className="order-card">
                 <div className="order-card-header">
                   <div>
-                    <h2>{order.customerName}</h2>
-                    <p>{order.phone} | {order.city}</p>
-                    <p>{order.address}</p>
+                    <h3>{order.customerName}</h3>
+                    <p>{order.phone}</p>
+                    <p>
+                      {order.address}
+                      {order.city ? `, ${order.city}` : ""}
+                    </p>
                   </div>
-                  <div>
-                    <p className="price">Rs. {order.totalPrice}</p>
-                    <p>{new Date(order.createdAt).toLocaleString()}</p>
-                  </div>
+
+                  <button
+                    className="remove-btn"
+                    type="button"
+                    onClick={() => deleteOrder(order._id)}
+                  >
+                    Delete
+                  </button>
                 </div>
 
-                <p><strong>Order ID:</strong> {order._id}</p>
-                <p><strong>Products:</strong> {order.productSummary}</p>
-
                 <div className="order-items">
-                  {order.items.map((item, index) => (
-                    <div className="order-item" key={`${order._id}-${index}`}>
+                  {(order.items || []).map((item, index) => (
+                    <div key={`${order._id}-${item.productId || index}`} className="order-item">
                       <div>
-                        <h3>{item.productName || item.name}</h3>
-                        <p>{item.category}</p>
+                        <h4>{item.productName || item.name}</h4>
                         <p>Qty: {item.quantity}</p>
-                        <p>Item total: Rs. {item.itemTotal}</p>
-                        {item.prescriptionUploaded && (
-                          <p className="prescription-status">
-                            Prescription fee: Rs. {item.prescriptionFee}
-                          </p>
+                        <p>Price: Rs {item.price}</p>
+                        {item.prescriptionFee > 0 && (
+                          <p>Prescription lenses: Rs {item.prescriptionFee}</p>
                         )}
                       </div>
 
                       {item.prescriptionImagePath && (
                         <a
+                          className="prescription-preview"
                           href={getImageUrl(item.prescriptionImagePath)}
                           target="_blank"
                           rel="noreferrer"
-                          className="prescription-preview"
                         >
+                          <span>Prescription</span>
                           <img
                             src={getImageUrl(item.prescriptionImagePath)}
                             alt={`${item.productName || item.name} prescription`}
                           />
-                          <span>Open prescription image</span>
                         </a>
                       )}
                     </div>
                   ))}
                 </div>
-              </article>
+
+                <strong>Total: Rs {order.totalPrice}</strong>
+              </div>
             ))}
           </section>
         )}
