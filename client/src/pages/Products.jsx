@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/navbar";
 import Footer from "../components/footer";
-import ProductModal from "../components/ProductModal";
+import ProductModal from "../components/productModal";
 import { API_BASE_URL } from "../config/api";
 import { normalizeProduct } from "../utils/productCategories";
 import "../styles/styles.css";
