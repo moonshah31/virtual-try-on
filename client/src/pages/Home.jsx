@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import Navbar from "../components/Navbar";
-import Footer from "../components/Footer";
+import Navbar from "../components/navbar";
+import Footer from "../components/footer";
 import HowItWorks from "../components/HowItWorks";
 import ProductModal from "../components/ProductModal";
 import CategoryShowcase from "../components/CategoryShowcase";
